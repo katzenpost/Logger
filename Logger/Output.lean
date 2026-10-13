@@ -12,6 +12,8 @@ inductive Output where
   | stderr
   /-- Appended to, and created if missing. -/
   | file (path : System.FilePath)
+  /-- Any stream: for one the program reads itself, such as a pane of log lines on screen. -/
+  | stream (s : IO.FS.Stream)
 
 def Output.open : Output → IO IO.FS.Stream
   | .stdout => IO.getStdout
@@ -20,5 +22,6 @@ def Output.open : Output → IO IO.FS.Stream
     if let some dir := path.parent then
       unless dir.toString.isEmpty do IO.FS.createDirAll dir
     return IO.FS.Stream.ofHandle (← IO.FS.Handle.mk path .append)
+  | .stream s => return s
 
 end Logger

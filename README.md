@@ -1,7 +1,7 @@
 # Logger
 
-Runtime logging for Lean programs: levels, modules, and output to stdout, stderr or a file. Lines
-look like those of Go's `op/go-logging`:
+Runtime logging for Lean programs: levels, modules, and output to stdout, stderr, a file or any
+stream. Lines look like those of Go's `op/go-logging`:
 
     15:02:12.581 NOTI client/conn: Connected to gateway.
 
