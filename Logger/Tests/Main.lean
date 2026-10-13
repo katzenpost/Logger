@@ -94,6 +94,15 @@ def files : TestM Unit := do
   (← Logger.new (.file nested) .info).info "made"
   check "creates missing directories" (← nested.pathExists)
 
+def customStream : TestM Unit := do
+  let buf ← IO.mkRef ({} : IO.FS.Stream.Buffer)
+  let l ← Logger.new (.stream (IO.FS.Stream.ofBuffer buf)) .info "pane"
+  l.info "into a buffer"
+  l.debug "filtered out"
+  let text := String.fromUTF8! (← buf.get).data
+  let msgs := (text.splitOn "\n").filterMap (splitLine · |>.map (·.2.2))
+  checkEq "a stream of the program's own" "pane: into a buffer" (",".intercalate msgs)
+
 def streams : TestM Unit := do
   let self ← IO.appPath
   for (which, other) in [("stdout", "stderr"), ("stderr", "stdout")] do
@@ -157,6 +166,7 @@ def main (args : List String) : IO UInt32 := do
     ← runSuite "filtering" filtering,
     ← runSuite "format" format,
     ← runSuite "files" files,
+    ← runSuite "custom stream" customStream,
     ← runSuite "streams" streams,
     ← runSuite "concurrency" concurrency,
     ← runSuite "sub-loggers" subLoggers,
