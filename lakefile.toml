@@ -1,0 +1,13 @@
+name = "Logger"
+defaultTargets = ["Logger"]
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[lean_lib]]
+name = "Logger"
+
+[[lean_exe]]
+name = "logger-test"
+root = "Logger.Tests.Main"
