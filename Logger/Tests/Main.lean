@@ -112,6 +112,24 @@ def streams : TestM Unit := do
     checkEq s!"{which} receives the lines" "CRIT ERRO WARN NOTI" (" ".intercalate tags)
     checkEq s!"{other} stays empty" "" theirs
 
+/-- `HH:MM` now in UTC. -/
+def utcMinute : IO String := do
+  let tm ← Std.Time.Timestamp.now
+  let wall := Std.Time.WallTime.ofTimestamp tm Std.Time.TimeZone.Offset.zero
+  return (Logger.formatTime (Std.Time.PlainDateTime.ofWallTime wall).time).take 5 |>.toString
+
+def noTimeZone : TestM Unit := do
+  let before ← utcMinute
+  let self ← IO.appPath
+  let out ← IO.Process.output { cmd := self.toString, args := #["emit", "stdout"],
+                                env := #[("TZ", some ":/nonexistent/zoneinfo/file")] }
+  let after ← utcMinute
+  check "exits cleanly" (out.exitCode == 0) (fun _ => out.stderr)
+  let lines := (out.stdout.splitOn "\n").filterMap splitLine
+  checkEq "writes every line" "CRIT ERRO WARN NOTI" (" ".intercalate (lines.map (·.2.1)))
+  let minutes := lines.map fun (time, _) => (time.take 5).toString
+  check "in UTC" (minutes.all (· ∈ [before, after])) (fun _ => s!"{minutes} not {before}/{after}")
+
 def concurrency : TestM Unit := do
   let path ← tempFile "concurrent.log"
   let l ← Logger.new (.file path) .info
@@ -168,6 +186,7 @@ def main (args : List String) : IO UInt32 := do
     ← runSuite "files" files,
     ← runSuite "custom stream" customStream,
     ← runSuite "streams" streams,
+    ← runSuite "no time zone" noTimeZone,
     ← runSuite "concurrency" concurrency,
     ← runSuite "sub-loggers" subLoggers,
     ← runSuite "monad" monad]
