@@ -10,7 +10,8 @@ import Logger.Output
 
 /-! # Loggers
 
-A logger writes one line per record: the local time, the level's tag, the module, the message.
+A logger writes one line per record: the local time (UTC where no time zone is set), the level's
+tag, the module, the message.
 
     15:02:12.581 NOTI client/conn: Connected to gateway.
 
@@ -54,6 +55,16 @@ def formatTime (t : Std.Time.PlainTime) : String :=
   s!"{pad 2 t.hour.val.toNat}:{pad 2 t.minute.val.toNat}:{pad 2 t.second.val.toNat}." ++
     pad 3 (t.nanosecond.val.toNat / 1000000)
 
+open Std.Time in
+/-- The time of day in the local zone, or in UTC when the zone can't be read. -/
+def localTime : IO PlainTime := do
+  let tm ← Timestamp.now
+  let offset ← try
+      let rules ← Database.defaultGetLocalZoneRules
+      pure (rules.findLocalTimeTypeForTimestamp tm).getTimeZone.offset
+    catch _ => pure TimeZone.Offset.zero
+  return (PlainDateTime.ofWallTime (WallTime.ofTimestamp tm offset)).time
+
 def formatLine (time : String) (lvl : Level) (module msg : String) : String :=
   let source := if module.isEmpty then "" else module ++ ": "
   s!"{time} {lvl.tag} {source}{msg}"
@@ -61,7 +72,7 @@ def formatLine (time : String) (lvl : Level) (module msg : String) : String :=
 def log (l : Logger) (lvl : Level) (msg : String) : IO Unit := do
   let some sink := l.sink | return
   unless lvl ≤ l.level do return
-  let line := formatLine (formatTime (← Std.Time.PlainTime.now)) lvl l.module msg
+  let line := formatLine (formatTime (← localTime)) lvl l.module msg
   sink.lock.atomically do
     sink.stream.putStrLn line
     sink.stream.flush
