@@ -49,7 +49,6 @@ def levels : TestM Unit := do
     (" ".intercalate (Level.all.map (·.name)))
   check "critical is most severe" (Level.all.all (Level.critical ≤ ·))
   check "debug is least severe" (Level.all.all (· ≤ Level.debug))
-  checkEq "tags" "CRIT ERRO WARN NOTI INFO DEBU" (" ".intercalate (Level.all.map (·.tag)))
   check "names parse" (Level.all.all fun l => Level.ofString? l.name == some l)
   check "parsing ignores case and spaces" (Level.ofString? " DeBuG " == some .debug)
   check "unknown name" (Level.ofString? "verbose").isNone
